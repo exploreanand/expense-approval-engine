@@ -1,70 +1,84 @@
-export default function ExpenseDetail() {
+import Link from 'next/link';
+import { ArrowLeft, Download, Calendar, Tag, DollarSign, ShieldCheck, FileText } from 'lucide-react';
+
+export default async function ExpensePage({ params }) {
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
+
   return (
-    <div className="min-h-screen bg-gray-50 p-8 font-sans">
-      <div className="max-w-5xl mx-auto">
-        {/* Top Header Section */}
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Expense Report: #EXP-2024-0812</h1>
-            <p className="text-gray-500 text-sm">Submitted on Oct 12, 2024 at 09:45 AM</p>
-          </div>
-          <button className="bg-white border border-gray-300 px-4 py-2 rounded shadow-sm text-sm font-bold hover:bg-gray-50">
-            Export PDF
+    <div className="p-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Navigation Header */}
+      <div className="flex justify-between items-center mb-12">
+        <Link href="/employee" className="flex items-center gap-2 text-slate-400 hover:text-blue-600 font-bold transition-all group">
+          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+          Back to Overview
+        </Link>
+        <div className="flex gap-4">
+          <button className="bg-white border border-slate-200 p-3 rounded-xl text-slate-600 hover:bg-slate-50 transition shadow-sm">
+            <Download size={20} />
+          </button>
+          <button className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition">
+            Approve Expense
           </button>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Summary & Receipt (Left 2/3) */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-              <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">Expense Summary</h2>
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <p className="text-xs font-bold text-gray-400 uppercase mb-1">Total Amount</p>
-                  <p className="text-3xl font-black text-blue-600">$1,240.50</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-gray-400 uppercase mb-1">Merchant</p>
-                  <p className="text-lg font-bold text-gray-800">Grand Hyatt Berlin</p>
-                </div>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
+            <div className="flex justify-between items-start mb-10">
+              <div>
+                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full">Report #{id}</span>
+                <h2 className="text-3xl font-black text-slate-900 mt-4 tracking-tight">Quarterly Team Offsite</h2>
               </div>
-              <div className="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded text-sm text-gray-700 italic">
-                "Submitting travel expenses for the Berlin Summit. All receipts attached."
+              <div className="text-right">
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Total Amount</p>
+                <p className="text-4xl font-black text-slate-900">$1,250.00</p>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-              <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Receipt Evidence</h2>
-              <div className="aspect-video border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 flex flex-col items-center justify-center">
-                <span className="text-green-600 font-bold mb-2">✓ Verified Receipt</span>
-                <button className="text-blue-600 text-sm font-bold hover:underline">View Full Size</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Approval Workflow (Right 1/3) */}
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-8">Approval Workflow</h2>
-            <div className="space-y-10 relative border-l-2 border-gray-100 ml-4 pl-8">
-              <div className="relative">
-                <div className="absolute -left-[41px] w-5 h-5 rounded-full bg-green-500 border-4 border-white"></div>
-                <p className="font-bold text-sm">Alex Rivera (Requestor)</p>
-                <p className="text-xs text-green-600 font-bold">Approved — Oct 12</p>
-              </div>
-              <div className="relative">
-                <div className="absolute -left-[41px] w-5 h-5 rounded-full bg-green-500 border-4 border-white"></div>
-                <p className="font-bold text-sm">Sarah Jenkins (Manager)</p>
-                <p className="text-xs text-green-600 font-bold">Approved — Oct 12</p>
-              </div>
-              <div className="relative">
-                <div className="absolute -left-[41px] w-5 h-5 rounded-full bg-blue-200 border-4 border-white"></div>
-                <p className="font-bold text-sm text-gray-400">Marcus Vane (Finance)</p>
-                <p className="text-xs text-blue-600 font-bold italic underline">Processing...</p>
-              </div>
+            <div className="grid grid-cols-2 gap-8 py-8 border-t border-slate-50">
+              <DetailItem icon={Calendar} label="Date" value="March 24, 2026" />
+              <DetailItem icon={Tag} label="Category" value="Travel & Events" />
+              <DetailItem icon={ShieldCheck} label="Policy Status" value="Compliant" color="text-emerald-500" />
+              <DetailItem icon={FileText} label="Attachment" value="receipt_offsite.pdf" />
             </div>
           </div>
         </div>
+
+        {/* Sidebar Summary Card */}
+        <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
+          <h3 className="text-xl font-black mb-6">Audit Log</h3>
+          <div className="space-y-6 relative z-10">
+            <AuditStep title="Submitted" date="2h ago" active />
+            <AuditStep title="Policy Check" date="1h ago" active />
+            <AuditStep title="Manager Review" date="Pending" />
+          </div>
+          <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-blue-600 rounded-full blur-[100px] opacity-20"></div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function DetailItem({ icon: Icon, label, value, color = "text-slate-900" }) {
+  return (
+    <div className="flex items-start gap-4">
+      <div className="p-3 bg-slate-50 rounded-xl text-slate-400"><Icon size={20} /></div>
+      <div>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+        <p className={`font-bold mt-1 ${color}`}>{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function AuditStep({ title, date, active }) {
+  return (
+    <div className="flex items-center justify-between border-b border-white/10 pb-4">
+      <span className={`text-sm font-bold ${active ? 'text-white' : 'text-slate-500'}`}>{title}</span>
+      <span className="text-[10px] font-black text-blue-400 uppercase">{date}</span>
     </div>
   );
 }
