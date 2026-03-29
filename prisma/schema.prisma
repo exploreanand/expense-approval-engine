@@ -1,0 +1,223 @@
+// ============================================================
+// Reimbursement Management System - Prisma Schema
+// PostgreSQL | Odoo x VIT Hackathon
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  admin
+  manager
+  employee
+}
+
+enum ExpenseStatus {
+  pending
+  partially_approved
+  approved
+  rejected
+}
+
+enum ApprovalStepStatus {
+  pending
+  approved
+  rejected
+  auto_approved
+  skipped
+}
+
+enum ConditionalRuleType {
+  percentage
+  specific_approver
+  hybrid
+}
+
+// ============================================================
+// MODELS
+// ============================================================
+
+model Company {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String   @db.VarChar(255)
+  countryCode   String   @map("country_code") @db.VarChar(3)
+  baseCurrency  String   @map("base_currency") @db.VarChar(3)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  users              User[]
+  expenseCategories  ExpenseCategory[]
+  expenses           Expense[]
+  approvalPolicies   ApprovalPolicy[]
+  auditLogs          AuditLog[]
+
+  @@map("companies")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  name         String   @db.VarChar(255)
+  role         UserRole @default(employee)
+  managerId    String?  @map("manager_id") @db.Uuid
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  company              Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  manager              User?            @relation("ManagerEmployee", fields: [managerId], references: [id], onDelete: SetNull)
+  subordinates         User[]           @relation("ManagerEmployee")
+  expenses             Expense[]        @relation("SubmitterExpenses")
+  approvalSteps        ApprovalStep[]   @relation("ApproverSteps")
+  policyApprovals      PolicyApprover[] @relation("ApproverInPolicy")
+  conditionalRuleTarget ConditionalRule[] @relation("SpecificApprover")
+  auditLogs            AuditLog[]       @relation("ActorLogs")
+
+  @@index([companyId, role], map: "idx_users_company_role")
+  @@map("users")
+}
+
+model ExpenseCategory {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String   @db.VarChar(100)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+
+  @@unique([companyId, name])
+  @@index([companyId], map: "idx_categories_company")
+  @@map("expense_categories")
+}
+
+model Expense {
+  id                   String        @id @default(uuid()) @db.Uuid
+  companyId            String        @map("company_id") @db.Uuid
+  submitterId          String        @map("submitter_id") @db.Uuid
+  categoryId           String        @map("category_id") @db.Uuid
+  description          String        @db.Text
+  originalAmount       Decimal       @map("original_amount") @db.Decimal(12, 2)
+  originalCurrency     String        @map("original_currency") @db.VarChar(3)
+  convertedAmount      Decimal       @map("converted_amount") @db.Decimal(12, 2)
+  exchangeRate         Decimal       @map("exchange_rate") @db.Decimal(12, 6)
+  conversionTimestamp  DateTime      @map("conversion_timestamp")
+  expenseDate          DateTime      @map("expense_date") @db.Date
+  receiptPath          String?       @map("receipt_path") @db.VarChar(500)
+  status               ExpenseStatus @default(pending)
+  policyId             String?       @map("policy_id") @db.Uuid
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  company        Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  submitter      User             @relation("SubmitterExpenses", fields: [submitterId], references: [id], onDelete: Cascade)
+  category       ExpenseCategory  @relation(fields: [categoryId], references: [id])
+  policy         ApprovalPolicy?  @relation(fields: [policyId], references: [id])
+  approvalSteps  ApprovalStep[]
+  auditLogs      AuditLog[]
+
+  @@index([companyId, status], map: "idx_expenses_company_status")
+  @@index([submitterId, status], map: "idx_expenses_submitter")
+  @@map("expenses")
+}
+
+model ApprovalPolicy {
+  id                String   @id @default(uuid()) @db.Uuid
+  companyId         String   @map("company_id") @db.Uuid
+  name              String   @db.VarChar(255)
+  minAmount         Decimal  @default(0) @map("min_amount") @db.Decimal(12, 2)
+  maxAmount         Decimal? @map("max_amount") @db.Decimal(12, 2)
+  isManagerApprover Boolean  @default(false) @map("is_manager_approver")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // Relations
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  policyApprovers PolicyApprover[]
+  conditionalRule ConditionalRule?
+  expenses        Expense[]
+
+  @@unique([companyId, name])
+  @@index([companyId, minAmount, maxAmount], map: "idx_policies_company_amount")
+  @@map("approval_policies")
+}
+
+model PolicyApprover {
+  id         String  @id @default(uuid()) @db.Uuid
+  policyId   String  @map("policy_id") @db.Uuid
+  approverId String  @map("approver_id") @db.Uuid
+  sequence   Int
+  label      String? @db.VarChar(100)
+
+  // Relations
+  policy   ApprovalPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  approver User           @relation("ApproverInPolicy", fields: [approverId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, sequence])
+  @@map("policy_approvers")
+}
+
+model ConditionalRule {
+  id                  String              @id @default(uuid()) @db.Uuid
+  policyId            String              @unique @map("policy_id") @db.Uuid
+  ruleType            ConditionalRuleType @map("rule_type")
+  percentageThreshold Int?                @map("percentage_threshold")
+  specificApproverId  String?             @map("specific_approver_id") @db.Uuid
+
+  // Relations
+  policy           ApprovalPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  specificApprover User?          @relation("SpecificApprover", fields: [specificApproverId], references: [id], onDelete: SetNull)
+
+  @@map("conditional_rules")
+}
+
+model ApprovalStep {
+  id         String             @id @default(uuid()) @db.Uuid
+  expenseId  String             @map("expense_id") @db.Uuid
+  approverId String             @map("approver_id") @db.Uuid
+  sequence   Int
+  status     ApprovalStepStatus @default(pending)
+  comment    String?            @db.Text
+  actedAt    DateTime?          @map("acted_at")
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  // Relations
+  expense  Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  approver User    @relation("ApproverSteps", fields: [approverId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId, sequence])
+  @@index([approverId, status], map: "idx_approval_steps_pending")
+  @@map("approval_steps")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  expenseId String?  @map("expense_id") @db.Uuid
+  actorId   String   @map("actor_id") @db.Uuid
+  action    String   @db.VarChar(50)
+  details   Json?    @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  company Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  expense Expense? @relation(fields: [expenseId], references: [id])
+  actor   User     @relation("ActorLogs", fields: [actorId], references: [id])
+
+  @@index([expenseId], map: "idx_audit_expense")
+  @@map("audit_log")
+}
