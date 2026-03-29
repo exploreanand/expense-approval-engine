@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { submitExpense } from "@/lib/actions";
 import Link from "next/link";
-import { redirect } from "next/navigation"; // Added for safety check
+import { redirect } from "next/navigation"; 
 
 export default async function EmployeeDashboard() {
   const session = await getServerSession();
@@ -14,28 +14,27 @@ export default async function EmployeeDashboard() {
 
   // 1. Fetch current user data for the top-right profile widget using EMAIL
   const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email }, // Fix: Query by email
+    where: { email: session.user.email },
     select: { 
-      id: true, // Need this for expenses query
+      id: true, 
       name: true, 
       role: true, 
-      companyId: true // Need this for categories query
+      companyId: true 
     }
   });
 
-  // Handle case where user isn't in DB yet
   if (!currentUser) {
      redirect("/login");
   }
 
   // 2. Fetch Categories for the dropdown
   const categories = await prisma.expenseCategory.findMany({
-    where: { companyId: currentUser.companyId } // Fix: Use currentUser
+    where: { companyId: currentUser.companyId } 
   });
 
   // 3. Fetch User's Expense History 
   const expenses = await prisma.expense.findMany({
-    where: { submitterId: currentUser.id }, // Fix: Use currentUser
+    where: { submitterId: currentUser.id }, 
     include: { category: true },
     orderBy: { createdAt: 'desc' }
   });
@@ -50,7 +49,7 @@ export default async function EmployeeDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800 flex flex-col">
       
-      {/* --- NEW TOP NAVIGATION BAR --- */}
+      {/* --- TOP NAVIGATION BAR --- */}
       <header className="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-2">
           <span className="bg-blue-600 text-white rounded p-1 text-xs font-bold tracking-wider">EF</span>
@@ -58,25 +57,21 @@ export default async function EmployeeDashboard() {
         </div>
 
         <div className="flex items-center gap-6">
-          {/* Notification Bell */}
           <button className="text-gray-400 hover:text-blue-600 transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
           </button>
 
-          {/* User Profile Widget */}
           <Link href="/profile" className="flex items-center gap-3 hover:bg-gray-50 p-2 rounded-lg transition-colors group cursor-pointer border border-transparent hover:border-gray-200">
             <div className="text-right hidden md:block">
               <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{currentUser.name}</p>
               <p className="text-xs text-gray-500 capitalize">{currentUser.role}</p>
             </div>
-            {/* Avatar Circle */}
             <div className="w-10 h-10 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-bold text-lg border border-blue-200 shadow-sm">
               {currentUser.name.charAt(0)}
             </div>
           </Link>
         </div>
       </header>
-      {/* ------------------------------ */}
 
       {/* Main Content Area */}
       <main className="flex-1 p-8">
@@ -89,7 +84,6 @@ export default async function EmployeeDashboard() {
               <p className="text-gray-500 text-sm mt-1">Welcome back. You have {pendingCount} expenses pending approval.</p>
             </div>
             
-            {/* Stat Cards */}
             <div className="flex gap-4">
               <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 min-w-[150px]">
                 <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Total Approved</p>
@@ -130,7 +124,6 @@ export default async function EmployeeDashboard() {
                   <textarea name="description" rows="3" required placeholder="Explain the reason for this expense..." className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
                 </div>
 
-                {/* Conversion Alert Box (Visual Only for now) */}
                 <div className="bg-blue-50 text-blue-700 text-sm p-3 rounded-lg flex items-center gap-2">
                   <span className="font-semibold">Converted Base Amount:</span> Ready for API conversion
                 </div>
@@ -192,7 +185,12 @@ export default async function EmployeeDashboard() {
                       <td className="py-4 px-4">
                         <span className="bg-gray-100 px-3 py-1.5 rounded-full text-xs font-medium text-gray-700">{exp.category.name}</span>
                       </td>
-                      <td className="py-4 px-4 font-semibold text-gray-900">{exp.originalAmount} {exp.originalCurrency}</td>
+                      
+                      {/* FIXED LINE: Wrapped exp.originalAmount in Number() and toFixed() */}
+                      <td className="py-4 px-4 font-semibold text-gray-900">
+                        {Number(exp.originalAmount).toFixed(2)} {exp.originalCurrency}
+                      </td>
+                      
                       <td className="py-4 px-4">
                         <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${
                           exp.status === 'approved' ? 'bg-green-100 text-green-700' : 
